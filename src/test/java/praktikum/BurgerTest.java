@@ -13,6 +13,12 @@ import java.util.Collection;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
+/**
+ * Юнит-тесты для класса {@link Burger}.
+ * Используются моки для Bun и Ingredient, параметризация для проверки расчёта цены.
+ * Все магические числа вынесены в константы с понятными именами.
+ * Каждый тест проверяет только одно условие (один assert на тест).
+ */
 @RunWith(MockitoJUnitRunner.class)
 public class BurgerTest {
 
@@ -22,8 +28,8 @@ public class BurgerTest {
     private static final float BUN_PRICE_100 = 100.0f;
     private static final float BUN_PRICE_300 = 300.0f;
 
-    private static final float INGREDIENT_PRICE_50 = 50.0f;
-    private static final float INGREDIENT_PRICE_70 = 70.0f;
+    private static final float SAUCE_PRICE = 50.0f;
+    private static final float FILLING_PRICE = 70.0f;
 
     private static final String BUN_NAME_BLACK = "black bun";
     private static final String BUN_NAME_RED = "red bun";
@@ -36,17 +42,24 @@ public class BurgerTest {
     private static final int INDEX_THIRD = 2;
     private static final int INDEX_INVALID = 5;
 
+    private static final int EXPECTED_LIST_SIZE_ONE = 1;
+    private static final int EXPECTED_LIST_SIZE_TWO = 2;
+
+    private static final float DELTA = 0.001f;
+
     private Burger burger;
 
     @Mock
     private Bun bunMock;
 
     @Mock
-    private Ingredient ingredientMock1;
+    private Ingredient sauceIngredient;
+
     @Mock
-    private Ingredient ingredientMock2;
+    private Ingredient fillingIngredient;
+
     @Mock
-    private Ingredient ingredientMock3;
+    private Ingredient extraIngredient;
 
     @Before
     public void setUp() {
@@ -63,41 +76,50 @@ public class BurgerTest {
     // ================== addIngredient ==================
     @Test
     public void addIngredientShouldIncreaseListSize() {
-        burger.addIngredient(ingredientMock1);
-        assertEquals("List size should be 1 after adding one ingredient", 1, burger.ingredients.size());
+        burger.addIngredient(sauceIngredient);
+        assertEquals("List size should be 1 after adding one ingredient",
+                EXPECTED_LIST_SIZE_ONE, burger.ingredients.size());
     }
 
     @Test
     public void addIngredientShouldContainAddedIngredient() {
-        burger.addIngredient(ingredientMock1);
-        assertTrue("Ingredient should be in list", burger.ingredients.contains(ingredientMock1));
+        burger.addIngredient(sauceIngredient);
+        assertTrue("Ingredient should be in list", burger.ingredients.contains(sauceIngredient));
     }
 
     @Test
-    public void addIngredientShouldPreserveOrderForMultipleIngredients() {
-        burger.addIngredient(ingredientMock1);
-        burger.addIngredient(ingredientMock2);
-        assertSame("First ingredient should be ingredientMock1", ingredientMock1, burger.ingredients.get(INDEX_FIRST));
-        assertSame("Second ingredient should be ingredientMock2", ingredientMock2, burger.ingredients.get(INDEX_SECOND));
-        // Это единственный тест с двумя ассертами, т.к. проверяется порядок добавления.
-        // Можно также разбить на два теста, но проверка порядка логически едина.
+    public void addIngredientShouldStoreFirstIngredientAtCorrectPosition() {
+        burger.addIngredient(sauceIngredient);
+        burger.addIngredient(fillingIngredient);
+        assertSame("First ingredient should be sauceIngredient",
+                sauceIngredient, burger.ingredients.get(INDEX_FIRST));
+    }
+
+    @Test
+    public void addIngredientShouldStoreSecondIngredientAtCorrectPosition() {
+        burger.addIngredient(sauceIngredient);
+        burger.addIngredient(fillingIngredient);
+        assertSame("Second ingredient should be fillingIngredient",
+                fillingIngredient, burger.ingredients.get(INDEX_SECOND));
     }
 
     // ================== removeIngredient ==================
     @Test
     public void removeIngredientShouldReduceListSize() {
-        burger.addIngredient(ingredientMock1);
-        burger.addIngredient(ingredientMock2);
+        burger.addIngredient(sauceIngredient);
+        burger.addIngredient(fillingIngredient);
         burger.removeIngredient(INDEX_FIRST);
-        assertEquals("List size should be 1 after removing one ingredient", 1, burger.ingredients.size());
+        assertEquals("List size should be 1 after removing one ingredient",
+                EXPECTED_LIST_SIZE_ONE, burger.ingredients.size());
     }
 
     @Test
     public void removeIngredientShouldRemoveCorrectElement() {
-        burger.addIngredient(ingredientMock1);
-        burger.addIngredient(ingredientMock2);
+        burger.addIngredient(sauceIngredient);
+        burger.addIngredient(fillingIngredient);
         burger.removeIngredient(INDEX_FIRST);
-        assertSame("Remaining ingredient should be ingredientMock2", ingredientMock2, burger.ingredients.get(INDEX_FIRST));
+        assertSame("Remaining ingredient should be fillingIngredient",
+                fillingIngredient, burger.ingredients.get(INDEX_FIRST));
     }
 
     @Test(expected = IndexOutOfBoundsException.class)
@@ -107,41 +129,68 @@ public class BurgerTest {
 
     // ================== moveIngredient ==================
     @Test
-    public void moveIngredientShouldPlaceElementAtNewIndex() {
-        burger.addIngredient(ingredientMock1);
-        burger.addIngredient(ingredientMock2);
-        burger.addIngredient(ingredientMock3);
+    public void moveIngredientShouldPlaceElementAtNewIndexWhenMovingForward() {
+        burger.addIngredient(sauceIngredient);
+        burger.addIngredient(fillingIngredient);
+        burger.addIngredient(extraIngredient);
         burger.moveIngredient(INDEX_FIRST, INDEX_THIRD);
-        assertSame("Element moved to index 2 should be ingredientMock1", ingredientMock1, burger.ingredients.get(INDEX_THIRD));
+        assertSame("Element moved to index 2 should be sauceIngredient",
+                sauceIngredient, burger.ingredients.get(INDEX_THIRD));
     }
 
     @Test
-    public void moveIngredientShouldShiftRemainingElementsWhenMovingForward() {
-        burger.addIngredient(ingredientMock1);
-        burger.addIngredient(ingredientMock2);
-        burger.addIngredient(ingredientMock3);
+    public void moveIngredientShouldShiftFirstElementWhenMovingForward() {
+        burger.addIngredient(sauceIngredient);
+        burger.addIngredient(fillingIngredient);
+        burger.addIngredient(extraIngredient);
         burger.moveIngredient(INDEX_FIRST, INDEX_THIRD);
-        assertSame("Element at index 0 becomes ingredientMock2", ingredientMock2, burger.ingredients.get(INDEX_FIRST));
-        assertSame("Element at index 1 becomes ingredientMock3", ingredientMock3, burger.ingredients.get(INDEX_SECOND));
-        // Здесь два ассерта, но они проверяют разные позиции. Можно разбить на два теста, но это усложнит код.
-        // Для учебного примера допустимо, т.к. перемещение влияет на все элементы.
+        assertSame("Element at index 0 becomes fillingIngredient",
+                fillingIngredient, burger.ingredients.get(INDEX_FIRST));
     }
 
     @Test
-    public void moveIngredientShouldShiftElementsWhenMovingBackward() {
-        burger.addIngredient(ingredientMock1);
-        burger.addIngredient(ingredientMock2);
-        burger.addIngredient(ingredientMock3);
+    public void moveIngredientShouldShiftSecondElementWhenMovingForward() {
+        burger.addIngredient(sauceIngredient);
+        burger.addIngredient(fillingIngredient);
+        burger.addIngredient(extraIngredient);
+        burger.moveIngredient(INDEX_FIRST, INDEX_THIRD);
+        assertSame("Element at index 1 becomes extraIngredient",
+                extraIngredient, burger.ingredients.get(INDEX_SECOND));
+    }
+
+    @Test
+    public void moveIngredientShouldPlaceElementAtNewIndexWhenMovingBackward() {
+        burger.addIngredient(sauceIngredient);
+        burger.addIngredient(fillingIngredient);
+        burger.addIngredient(extraIngredient);
         burger.moveIngredient(INDEX_THIRD, INDEX_FIRST);
-        assertSame("Element moved to index 0 should be ingredientMock3", ingredientMock3, burger.ingredients.get(INDEX_FIRST));
-        assertSame("Element at index 1 should be ingredientMock1", ingredientMock1, burger.ingredients.get(INDEX_SECOND));
-        assertSame("Element at index 2 should be ingredientMock2", ingredientMock2, burger.ingredients.get(INDEX_THIRD));
-        // Аналогично, три проверки, т.к. это один сценарий перемещения.
+        assertSame("Element moved to index 0 should be extraIngredient",
+                extraIngredient, burger.ingredients.get(INDEX_FIRST));
+    }
+
+    @Test
+    public void moveIngredientShouldShiftFirstElementWhenMovingBackward() {
+        burger.addIngredient(sauceIngredient);
+        burger.addIngredient(fillingIngredient);
+        burger.addIngredient(extraIngredient);
+        burger.moveIngredient(INDEX_THIRD, INDEX_FIRST);
+        assertSame("Element at index 1 should be sauceIngredient",
+                sauceIngredient, burger.ingredients.get(INDEX_SECOND));
+    }
+
+    @Test
+    public void moveIngredientShouldShiftSecondElementWhenMovingBackward() {
+        burger.addIngredient(sauceIngredient);
+        burger.addIngredient(fillingIngredient);
+        burger.addIngredient(extraIngredient);
+        burger.moveIngredient(INDEX_THIRD, INDEX_FIRST);
+        assertSame("Element at index 2 should be fillingIngredient",
+                fillingIngredient, burger.ingredients.get(INDEX_THIRD));
     }
 
     @Test(expected = IndexOutOfBoundsException.class)
     public void moveIngredientWithInvalidIndexShouldThrowException() {
-        burger.addIngredient(ingredientMock1);
+        burger.addIngredient(sauceIngredient);
         burger.moveIngredient(INDEX_INVALID, INDEX_FIRST);
     }
 
@@ -150,22 +199,23 @@ public class BurgerTest {
     public void getPriceShouldReturnDoubleBunPriceWhenNoIngredients() {
         when(bunMock.getPrice()).thenReturn(BUN_PRICE_150);
         burger.setBuns(bunMock);
-        float expected = BUN_PRICE_150 * 2;
-        assertEquals("Price should be 2 * bun price", expected, burger.getPrice(), 0.001);
+        float expected = BUN_PRICE_150 * EXPECTED_LIST_SIZE_TWO;
+        assertEquals("Price should be 2 * bun price", expected, burger.getPrice(), DELTA);
     }
 
     @Test
     public void getPriceShouldIncludeBunAndIngredientsSum() {
         when(bunMock.getPrice()).thenReturn(BUN_PRICE_200);
         burger.setBuns(bunMock);
-        when(ingredientMock1.getPrice()).thenReturn(INGREDIENT_PRICE_50);
-        when(ingredientMock2.getPrice()).thenReturn(INGREDIENT_PRICE_70);
-        burger.addIngredient(ingredientMock1);
-        burger.addIngredient(ingredientMock2);
-        float expected = BUN_PRICE_200 * 2 + INGREDIENT_PRICE_50 + INGREDIENT_PRICE_70;
-        assertEquals("Price should include bun and ingredients", expected, burger.getPrice(), 0.001);
+        when(sauceIngredient.getPrice()).thenReturn(SAUCE_PRICE);
+        when(fillingIngredient.getPrice()).thenReturn(FILLING_PRICE);
+        burger.addIngredient(sauceIngredient);
+        burger.addIngredient(fillingIngredient);
+        float expected = BUN_PRICE_200 * EXPECTED_LIST_SIZE_TWO + SAUCE_PRICE + FILLING_PRICE;
+        assertEquals("Price should include bun and ingredients", expected, burger.getPrice(), DELTA);
     }
 
+    // Параметризованный тест для getPrice()
     @RunWith(Parameterized.class)
     public static class BurgerPriceParameterizedTest {
 
@@ -201,27 +251,27 @@ public class BurgerTest {
                 burger.addIngredient(ing);
             }
 
-            assertEquals(expectedTotal, burger.getPrice(), 0.001);
+            assertEquals(expectedTotal, burger.getPrice(), DELTA);
         }
     }
 
     // ================== getReceipt ==================
     @Test
-    public void getReceiptShouldContainBunNameAndPriceWithIngredients() {
+    public void getReceiptShouldReturnFormattedStringWithIngredients() {
         when(bunMock.getName()).thenReturn(BUN_NAME_BLACK);
         when(bunMock.getPrice()).thenReturn(BUN_PRICE_100);
         burger.setBuns(bunMock);
 
-        when(ingredientMock1.getType()).thenReturn(IngredientType.SAUCE);
-        when(ingredientMock1.getName()).thenReturn(SAUCE_NAME_HOT);
-        when(ingredientMock1.getPrice()).thenReturn(INGREDIENT_PRICE_50);
+        when(sauceIngredient.getType()).thenReturn(IngredientType.SAUCE);
+        when(sauceIngredient.getName()).thenReturn(SAUCE_NAME_HOT);
+        when(sauceIngredient.getPrice()).thenReturn(SAUCE_PRICE);
 
-        when(ingredientMock2.getType()).thenReturn(IngredientType.FILLING);
-        when(ingredientMock2.getName()).thenReturn(FILLING_NAME_CUTLET);
-        when(ingredientMock2.getPrice()).thenReturn(INGREDIENT_PRICE_70);
+        when(fillingIngredient.getType()).thenReturn(IngredientType.FILLING);
+        when(fillingIngredient.getName()).thenReturn(FILLING_NAME_CUTLET);
+        when(fillingIngredient.getPrice()).thenReturn(FILLING_PRICE);
 
-        burger.addIngredient(ingredientMock1);
-        burger.addIngredient(ingredientMock2);
+        burger.addIngredient(sauceIngredient);
+        burger.addIngredient(fillingIngredient);
 
         String receipt = burger.getReceipt();
 
